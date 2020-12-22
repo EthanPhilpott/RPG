@@ -1,0 +1,37 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    image-rendering: pixelated;
+}
+
+:root {
+    --player-size: 10px;
+    --sword-size : 5px;
+}
+
+.player {
+    width:  var(--player-size);
+    height: var(--player-size);
+    background-color: red;
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sword {
+    display: flex;
+    width:  var(--sword-size);
+    height: var(--sword-size);
+    /* border-radius: 50%; */
+    background-color: royalblue;
+    position: absolute;
+}
+
+.proj {
+    width: 30px;
+    height: 5px;
+    background-color: seagreen;
+    position: absolute;
+}
