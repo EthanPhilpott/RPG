@@ -1,4 +1,5 @@
 "use strict"
+document.addEventListener('contextmenu', event => event.preventDefault());
 
 //
 // ░█████╗░░█████╗░███╗░░██╗░██████╗████████╗░██████╗
@@ -11,8 +12,16 @@
 
 let root = getComputedStyle(document.documentElement);
 
-const PLAYER_SIZE = Number(root.getPropertyValue('--player-size').replace('px', ''));
-const SWORD_SIZE  = Number(root.getPropertyValue('--sword-size') .replace('px', ''));
+const PLAYER_SIZE  = Number(root.getPropertyValue('--player-size') .replace('px', ''));
+const SWORD_WIDTH  = Number(root.getPropertyValue('--sword-width') .replace('px', ''));
+const SWORD_HEIGHT = Number(root.getPropertyValue('--sword-height').replace('px', ''));
+
+const SWORD_GAB   = document.createElement('div');
+SWORD_GAB.classList.add('sword-gab');
+const SPIN_MOVE   = document.createElement('div');
+SPIN_MOVE.classList.add('spin-move');
+const SWORD_SLASH = document.createElement('div');
+SWORD_SLASH.classList.add('sword-slash');
 
 //
 // ██╗░░██╗██╗████████╗██████╗░░█████╗░██╗░░██╗
@@ -77,16 +86,30 @@ class HitBox {
 //
 
 class Player {
-    constructor (html, weaponHtml) {
-        this.html         = html;
-        this.weapon       = {html: weaponHtml, pos: {x: 0, y: 0}}
-        this.pos          = {x: 0, y: 0}
-        this.mouse        = {x: 0, y: 0, angle: 0}
-        this.pressed      = [];
-        this.maxSpeed     = .30;
-        this.acceleration = .005;
-        this.velocity     = {w: 0, a: 0, s: 0, d: 0};
-        this.slowMult     = 1.5;
+    constructor (html, weaponHtml, class_) {
+        this.html          = html;
+        this.weapon        = {html: weaponHtml, pos: {x: 0, y: 0}}
+        this.class         = class_;
+        
+        this.pos           = {x: 0, y: 0}
+        this.mouse         = {x: 0, y: 0, angle: 0}
+        
+        this.pressed       = [];
+        this.click         = -1
+        
+        this.acceleration  = .005;
+        this.accelSlowMult = 1.5;
+
+        this.maxSpeed      = .30;
+        this.baseMaxSpeed  = .30;
+        this.velocity      = {w: 0, a: 0, s: 0, d: 0};
+        
+        this.slowed        = false;
+        this.slowDiv       = 2;
+
+        this.charge        = {left: 0, right: 0};
+        this.maxCharge     = {left: 1, right: 1};
+        this.chargeRate    = {left: 0.005, right: 0.005};
 
         this.Events();
         this.Animate();
@@ -109,21 +132,21 @@ class Player {
             this.MouseAngle()
         })
 
-        window.addEventListener('click', (e) => {
-            let div = document.createElement('div')
-            div.style.width  = '5px'
-            div.style.height = '5px'
-            div.style.backgroundColor = 'purple'
-            div.style.position = 'absolute'
-            div.style.transform = `translate(${this.weapon.pos.x}px, ${this.weapon.pos.y}px) rotate(${this.mouse.angle}rad)`
-            this.html.appendChild(div)
+        window.addEventListener('mousedown', (e) => {
+            this.mouseDown = true;
+            this.click     = e.button;
+        })
+
+        window.addEventListener('mouseup', (e) => {
+            this.mouseDown = false;
+            this.click     = -1
         })
     }
 
     MouseAngle () {
         this.mouse.angle  = Math.atan2(this.mouse.y - this.pos.y, this.mouse.x - this.pos.x)
-        this.weapon.pos.x = Math.cos(this.mouse.angle) * PLAYER_SIZE;
-        this.weapon.pos.y = Math.sin(this.mouse.angle) * PLAYER_SIZE;
+        this.weapon.pos.x = Math.cos(this.mouse.angle) * (PLAYER_SIZE + SWORD_HEIGHT / 2) ;
+        this.weapon.pos.y = Math.sin(this.mouse.angle) * (PLAYER_SIZE + SWORD_HEIGHT / 2) ;
         this.weapon.html.style.transform = `translate(${this.weapon.pos.x}px, ${this.weapon.pos.y}px) rotate(${this.mouse.angle}rad)`
     }
 
@@ -134,8 +157,9 @@ class Player {
     }
 
     Update () {
-        this.Move()
-        this.MouseAngle() 
+        this.Move();
+        this.MouseAngle();
+        this.Attack(); 
         this.html.style.transform = `translate(${this.pos.x - PLAYER_SIZE / 2}px, ${this.pos.y - PLAYER_SIZE / 2}px)`
     }
 
@@ -145,7 +169,7 @@ class Player {
             this.pos.y -= 1 * this.velocity.w; 
         } else {
             if (this.velocity.w > 0) {
-                this.velocity.w -= 1 * this.acceleration * this.slowMult;
+                this.velocity.w -= 1 * this.acceleration * this.accelSlowMult;
                 this.pos.y -= 1 * this.velocity.w; 
             }
         }
@@ -155,7 +179,7 @@ class Player {
             this.pos.x -= 1 * this.velocity.a; 
         } else {
             if (this.velocity.a > 0) {
-                this.velocity.a -= 1 * this.acceleration * this.slowMult;
+                this.velocity.a -= 1 * this.acceleration * this.accelSlowMult;
                 this.pos.x -= 1 * this.velocity.a; 
             } 
         }
@@ -165,7 +189,7 @@ class Player {
             this.pos.y += 1 * this.velocity.s; 
         } else {
             if (this.velocity.s > 0) {
-                this.velocity.s -= 1 * this.acceleration * this.slowMult;
+                this.velocity.s -= 1 * this.acceleration * this.accelSlowMult;
                 this.pos.y += 1 * this.velocity.s; 
             } 
         }
@@ -175,10 +199,96 @@ class Player {
             this.pos.x += 1 * this.velocity.d; 
         } else {
             if (this.velocity.d > 0) {
-                this.velocity.d -= 1 * this.acceleration * this.slowMult;
+                this.velocity.d -= 1 * this.acceleration * this.accelSlowMult;
                 this.pos.x += 1 * this.velocity.d; 
             }
         }
+    }
+
+    Attack () {
+        switch (this.class) {
+            case 'sword-bearer':
+
+                if (this.click === 2) {
+                    if (this.charge.right < this.maxCharge.right) this.charge.right += this.chargeRate.right;
+                    if (!(this.slowed)) {
+                        this.maxSpeed /= this.slowDiv;
+                        this.velocity = {w: this.maxSpeed, a: this.maxSpeed, s: this.maxSpeed, d: this.maxSpeed};
+                        this.slowed = true;
+                    }
+                } 
+                
+                else if (this.click === 0) {
+                    if (this.charge.left < this.maxCharge.left) this.charge.left += this.chargeRate.left;
+                    if (!(this.slowed)) {
+                        this.velocity = {w: this.velocity.w / 2, a: this.velocity.a / 2, s: this.velocity.s / 2, d: this.velocity.d / 2};
+                        this.maxSpeed /= this.slowDiv;
+                        this.slowed = true;
+                    }
+                } 
+                
+                else {
+                    if (this.charge.right >= this.maxCharge.right) {
+                        let proj = SPIN_MOVE.cloneNode(true)
+                        let projProp = getComputedStyle(proj);
+                        document.body.appendChild(proj);
+                        new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 0, [0, this.mouse.angle], 500)
+                    } else if (this.charge.left >= this.maxCharge.left / 2) {
+                        let proj = SWORD_SLASH.cloneNode(true);
+                        let projProp = getComputedStyle(proj);
+                        document.body.appendChild(proj);
+                        new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0, this.mouse.angle], 350)
+                    } else if (this.charge.left >= this.maxCharge.left / 7) {
+                        let proj = SWORD_GAB.cloneNode(true)
+                        let projProp = getComputedStyle(proj);
+                        document.body.appendChild(proj);
+                        new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0.15, this.mouse.angle], 250)
+                    }
+        
+                    this.charge   = {left: 0, right: 0};
+                    this.maxSpeed = this.baseMaxSpeed
+                    this.slowed   = false;
+                }
+
+                break;
+        }
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        // if (this.mouseDown) {
+        //     if (this.charge < this.maxCharge) this.charge += this.chargeRate;
+        //     if (!(this.slowed)) {
+
+        //         this.velocity = {w: this.velocity.w / 2, a: this.velocity.a / 2, s: this.velocity.s / 2, d: this.velocity.d / 2};
+        //         this.maxSpeed /= this.slowDiv;
+        //         this.slowed = true;
+        //     }
+        // } else {
+        //     if (this.charge >= this.maxCharge) {
+        //         let proj = SPIN_MOVE.cloneNode(true)
+        //         let projProp = getComputedStyle(proj);
+        //         document.body.appendChild(proj);
+        //         new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 0, [0, this.mouse.angle], 500)
+        //     } else if (this.charge > 0.10) {
+        //         let proj = SWORD_GAB_PROJ.cloneNode(true)
+        //         let projProp = getComputedStyle(proj);
+        //         document.body.appendChild(proj);
+        //         new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0.15, this.mouse.angle], 250)
+        //     }
+        //     this.maxSpeed = this.baseMaxSpeed
+        //     this.slowed = false
+        //     this.charge = 0;
+        // }
     }
 }
 
@@ -192,11 +302,16 @@ class Player {
 //
 
 class Projectile {
-    constructor (html, hitbox, startx, starty, velocity) {
+    constructor (html, hitbox, startx, starty, forward, velocity, lifespan) {
         this.html     = html;
-        this.pos      = {x: startx, y: starty};
+        this.hitbox   = hitbox;
         this.velocity = velocity;
-        this.displace = 1;
+        this.pos      = {
+            x: startx + Math.cos(this.velocity[1]) * forward, 
+            y: starty + Math.sin(this.velocity[1]) * forward
+        };
+        this.timeStart = Date.now()
+        this.lifespan  = lifespan;
 
         this.html.style.transform = `translate(${this.pos.x}px, ${this.pos.y}px) rotate(${this.velocity[1]}rad)`
         this.Animate();
@@ -210,19 +325,20 @@ class Projectile {
 
     Update () {
         this.Move();
+        if (Date.now() > this.timeStart + this.lifespan) {
+            this.Delete()
+        } 
     }
 
     Move () {
-        this.displace += this.velocity[0];
-        this.pos.x = Math.cos(this.velocity[1]) * this.displace;
-        this.pos.y = Math.sin(this.velocity[1]) * this.displace;
+        this.pos.x += Math.cos(this.velocity[1]) * this.velocity[0];
+        this.pos.y += Math.sin(this.velocity[1]) * this.velocity[0];
         this.html.style.transform = `translate(${this.pos.x}px, ${this.pos.y}px) rotate(${this.velocity[1]}rad)`
+    }
+
+    Delete () {
+        this.html.remove();
     }
 }
 
-let projAngle = Math.PI / 4;
-let testProjHitBox = new HitBox([0, 0], [10, 0], [10, 30], [0, 30], projAngle)
-console.log(testProjHitBox.ReturnPoints())
-let testProj = new Projectile(document.getElementById('proj'), testProjHitBox, 100, 100, [1, projAngle]) 
-
-let player = new Player(document.getElementById('player'), document.getElementById('sword'));
+let player = new Player(document.getElementById('player'), document.getElementById('sword'), 'sword-bearer');
