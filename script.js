@@ -206,89 +206,45 @@ class Player {
     }
 
     Attack () {
-        switch (this.class) {
-            case 'sword-bearer':
+        if (this.click === 2) {
+            if (this.charge.right < this.maxCharge.right) this.charge.right += this.chargeRate.right;
+            if (!(this.slowed)) {
+                this.maxSpeed /= this.slowDiv;
+                this.velocity = {w: this.maxSpeed, a: this.maxSpeed, s: this.maxSpeed, d: this.maxSpeed};
+                this.slowed = true;
+            }
+        } 
 
-                if (this.click === 2) {
-                    if (this.charge.right < this.maxCharge.right) this.charge.right += this.chargeRate.right;
-                    if (!(this.slowed)) {
-                        this.maxSpeed /= this.slowDiv;
-                        this.velocity = {w: this.maxSpeed, a: this.maxSpeed, s: this.maxSpeed, d: this.maxSpeed};
-                        this.slowed = true;
-                    }
-                } 
-                
-                else if (this.click === 0) {
-                    if (this.charge.left < this.maxCharge.left) this.charge.left += this.chargeRate.left;
-                    if (!(this.slowed)) {
-                        this.velocity = {w: this.velocity.w / 2, a: this.velocity.a / 2, s: this.velocity.s / 2, d: this.velocity.d / 2};
-                        this.maxSpeed /= this.slowDiv;
-                        this.slowed = true;
-                    }
-                } 
-                
-                else {
-                    if (this.charge.right >= this.maxCharge.right) {
-                        let proj = SPIN_MOVE.cloneNode(true)
-                        let projProp = getComputedStyle(proj);
-                        document.body.appendChild(proj);
-                        new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 0, [0, this.mouse.angle], 500)
-                    } else if (this.charge.left >= this.maxCharge.left / 2) {
-                        let proj = SWORD_SLASH.cloneNode(true);
-                        let projProp = getComputedStyle(proj);
-                        document.body.appendChild(proj);
-                        new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0, this.mouse.angle], 350)
-                    } else if (this.charge.left >= this.maxCharge.left / 7) {
-                        let proj = SWORD_GAB.cloneNode(true)
-                        let projProp = getComputedStyle(proj);
-                        document.body.appendChild(proj);
-                        new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0.15, this.mouse.angle], 250)
-                    }
+        else if (this.click === 0) {
+            if (this.charge.left < this.maxCharge.left) this.charge.left += this.chargeRate.left;
+            if (!(this.slowed)) {
+                this.velocity = {w: this.velocity.w / 2, a: this.velocity.a / 2, s: this.velocity.s / 2, d: this.velocity.d / 2};
+                this.maxSpeed /= this.slowDiv;
+                this.slowed = true;
+            }
+        } 
         
-                    this.charge   = {left: 0, right: 0};
-                    this.maxSpeed = this.baseMaxSpeed
-                    this.slowed   = false;
-                }
-
-                break;
+        else {
+            if (this.charge.right >= this.maxCharge.right) {
+                let proj = SPIN_MOVE.cloneNode(true)
+                let projProp = getComputedStyle(proj);
+                document.body.appendChild(proj);
+                new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 0, [0, this.mouse.angle], 500)
+            } else if (this.charge.left >= this.maxCharge.left / 2) {
+                let proj = SWORD_SLASH.cloneNode(true);
+                let projProp = getComputedStyle(proj);
+                document.body.appendChild(proj);
+                new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0.1, this.mouse.angle], 350)
+            } else if (this.charge.left >= 0.01) {
+                let proj = SWORD_GAB.cloneNode(true)
+                let projProp = getComputedStyle(proj);
+                document.body.appendChild(proj);
+                new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0.15, this.mouse.angle], 250)
+            }
+            this.charge   = {left: 0, right: 0};
+            this.maxSpeed = this.baseMaxSpeed
+            this.slowed   = false;
         }
-        
-
-
-
-
-
-
-
-
-
-
-
-
-        // if (this.mouseDown) {
-        //     if (this.charge < this.maxCharge) this.charge += this.chargeRate;
-        //     if (!(this.slowed)) {
-
-        //         this.velocity = {w: this.velocity.w / 2, a: this.velocity.a / 2, s: this.velocity.s / 2, d: this.velocity.d / 2};
-        //         this.maxSpeed /= this.slowDiv;
-        //         this.slowed = true;
-        //     }
-        // } else {
-        //     if (this.charge >= this.maxCharge) {
-        //         let proj = SPIN_MOVE.cloneNode(true)
-        //         let projProp = getComputedStyle(proj);
-        //         document.body.appendChild(proj);
-        //         new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 0, [0, this.mouse.angle], 500)
-        //     } else if (this.charge > 0.10) {
-        //         let proj = SWORD_GAB_PROJ.cloneNode(true)
-        //         let projProp = getComputedStyle(proj);
-        //         document.body.appendChild(proj);
-        //         new Projectile (proj, 0, this.pos.x - projProp.getPropertyValue('width').replace('px', '') / 2, this.pos.y - projProp.getPropertyValue('height').replace('px', '') / 2, 25, [0.15, this.mouse.angle], 250)
-        //     }
-        //     this.maxSpeed = this.baseMaxSpeed
-        //     this.slowed = false
-        //     this.charge = 0;
-        // }
     }
 }
 
@@ -341,4 +297,4 @@ class Projectile {
     }
 }
 
-let player = new Player(document.getElementById('player'), document.getElementById('sword'), 'sword-bearer');
+let player = new Player(document.getElementById('player'), document.getElementById('sword'), 'swordsman');
